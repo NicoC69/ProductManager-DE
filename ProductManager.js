@@ -8,8 +8,8 @@ class ProductManager {
     this.idCounter = this.products.length > 0 ? Math.max(...this.products.map(p => parseInt(p.id, 10))) + 1 : 1;
   }
 
-  getProducts() {
-    return this.products;
+  getProducts(limit) {
+    return limit ? this.products.slice(0, limit) : this.products;
   }
 
   addProduct(title, description, price, thumbnail, code, stock, callback) {
@@ -27,19 +27,38 @@ class ProductManager {
 
     this.saveProductsToFile((err) => {
       if (err) {
-        callback(err);
+        if (callback) {
+          callback(err);
+        }
       } else {
-        callback(null, product);
+        if (callback) {
+          callback(null, product);
+        }
       }
     });
   }
-
+  
   getProductById(id, callback) {
-    const product = this.products.find((p) => p.id === id);
-    if (!product) {
-      callback(new Error("Product not found"));
-    } else {
-      callback(null, product);
+    try {
+      console.log('Buscando producto con ID:', id);
+      const product = this.products.find((p) => p.id === id.toString());
+      console.log('Producto encontrado:', product);
+  
+      if (!product) {
+        throw new Error("Product not found");
+      }
+  
+      if (callback) {
+        callback(null, product);
+      }
+    } catch (error) {
+      console.error('Error en getProductById:', error);
+  
+      if (callback) {
+        callback(error, null);
+      } else {
+        throw error;
+      }
     }
   }
 
@@ -93,8 +112,13 @@ class ProductManager {
   loadProductsFromFile() {
     try {
       const data = fs.readFileSync(this.dataFilePath, 'utf-8');
-      this.products = JSON.parse(data);
+        this.products = JSON.parse(data);
+      
+    if (this.products && this.products.length > 0 && this.limit) {
+        this.products = this.products.slice(0, this.limit);
+      }
     } catch (err) {
+      console.error('Error loading products from file:', err);
     }
   }
 
@@ -110,7 +134,10 @@ class ProductManager {
   }
 }
 
-// Ejemplo de uso:
+module.exports = ProductManager;
+
+/* Para agregar mas productos
+
 const dataFilePath = 'products.json';
 const productManager = new ProductManager(dataFilePath);
 
@@ -128,38 +155,5 @@ productManager.addProduct(
       console.error(err);
     } else {
       console.log(productManager.getProducts());
-
-      productManager.getProductById(newProduct.id, (err, retrievedProduct) => {
-        if (err) {
-          console.error(err);
-        } else {
-          console.log(retrievedProduct);
-
-          productManager.updateProduct(
-            newProduct.id,
-            { price: 250 },
-            (err, updatedProduct) => {
-              if (err) {
-                console.error(err);
-              } else {
-                console.log(updatedProduct);
-
-                productManager.deleteProduct(
-                  newProduct.id,
-                  (err, deletedProduct) => {
-                    if (err) {
-                      console.error(err);
-                    } else {
-                      console.log(deletedProduct);
-                      console.log(productManager.getProducts());
-                    }
-                  }
-                );
-              }
-            }
-          );
-        }
-      });
-    }
-  }
-);
+    }})
+*/
